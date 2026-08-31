@@ -1,98 +1,101 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Key Store API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS/Fastify backend for a small digital-key store. Data is persisted as
+JSON files and seed data is written at startup.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Requirements and setup
 
-## Description
+- Node.js 20 or newer
+- pnpm
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+From this directory:
 
 ```bash
-$ pnpm install
+pnpm install
+pnpm run build
+pnpm run start:dev
 ```
 
-## Compile and run the project
+The server listens on `http://localhost:5555` by default. Set `PORT` to
+change the port. The storage directory defaults to `server/storage`; set
+`STORAGE_PATH` to use another directory.
+
+## API
+
+All request bodies are validated. Unknown properties are rejected.
+
+### `GET /`
+
+Returns the basic service greeting as plain text:
+
+```text
+Hello World!
+```
+
+### `GET /health`
+
+Returns `{"status":"ok"}`.
+
+### `GET /products`
+
+Returns active and inactive product records. A seeded installation contains
+the `KEY-CS2-PRIME` product.
+
+### `GET /products/:sku`
+
+Returns an active product, or `404` if the SKU does not exist or is inactive.
+
+### `POST /orders/create`
+
+Creates an order for an active product:
+
+```json
+{ "sku": "KEY-CS2-PRIME" }
+```
+
+The response contains the order ID, SKU, amount, currency, status, and
+timestamps. Invalid or unknown fields return `400`; an unknown SKU returns
+`404`.
+
+### `GET /orders/:id`
+
+Returns an order, or `404` when the ID is unknown.
+
+### `POST /webhook/payment`
+
+Accepts an idempotent payment event and processes it immediately:
+
+```json
+{
+  "event_id": "payment-123",
+  "order_id": "<order-id>",
+  "status": "paid",
+  "amount": 1290,
+  "currency": "RUB",
+  "created_at": "2026-01-01T12:00:00.000Z"
+}
+```
+
+`status` must be `paid` or `failed`; `created_at` must be an ISO-8601
+timestamp. A successful payment marks the order paid and starts key delivery before the
+request completes.
+Repeated `event_id` values are ignored safely. Payment events for missing
+orders are stored but do not alter an order.
+
+## Storage and concurrency
+
+JSON files are stored under `storage/<collection>/<id>.json`. Writes use a
+temporary file followed by rename, and inventory/payment operations use lock
+files to prevent concurrent duplicate allocation. Missing collections are
+treated as empty and are created automatically.
+
+## Commands
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm run build       # compile
+pnpm run start       # run compiled Nest app
+pnpm run start:dev   # watch mode
+pnpm run test        # unit tests
+pnpm run test:e2e    # end-to-end tests
+pnpm run lint        # ESLint (fix mode)
 ```
-
-## Run tests
-
-```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
