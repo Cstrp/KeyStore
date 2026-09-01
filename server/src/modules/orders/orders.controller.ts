@@ -1,8 +1,10 @@
 import type { CreateOrderDto } from './dto/create-order.dto';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import type { Order } from '../../types';
 
+@AllowAnonymous()
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}

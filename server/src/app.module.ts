@@ -17,7 +17,7 @@ import {
 
 @Module({
   imports: [
-    AuthModule.forRoot({ auth, disableTrustedOriginsCors: true }),
+    AuthModule.forRoot({ auth }),
     ConfigModule.forRoot({ isGlobal: true }),
     HttpModule.register({ global: true }),
     PaymentsModule,
